@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <title>Random Son Tanlash</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #10bfa8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .range {
+      background: #ffffff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .result-box {
+      width: 260px;
+      height: 120px;
+      background: #fff;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+
+    button {
+      padding: 14px 40px;
+      font-size: 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #0f766e;
+      color: white;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Tepada nechidan nechigacha -->
+  <div class="range">
+    <input type="number" id="min" value="1" style="width:70px; font-size:16px;"> dan
+    <input type="number" id="max" value="159" style="width:70px; font-size:16px;"> gacha
+  </div>
+
+  <!-- Pastda random natija -->
+  <div class="result-box" id="result">?</div>
+
+  <div style="display:flex; gap:12px; align-items:center; margin-bottom:15px;">
+    <button onclick="toggleSound()" id="soundBtn">🔊 Ovoz yoqilgan</button>
+    <label style="color:#fff; font-weight:bold;">Ovoz</label>
+    <input type="range" id="volume" min="0" max="100" value="60">
+  </div>
+
+  <button onclick="randomSon()">RANDOM</button>
+
+  <div style="margin-top:20px; width:280px; background:#ffffff; border-radius:10px; padding:10px;">
+    <div style="font-weight:bold; margin-bottom:6px;">📜 Chiqqan sonlar:</div>
+    <div id="history" style="font-size:14px; line-height:1.5; max-height:120px; overflow-y:auto;"></div>
+    <button style="margin-top:10px; width:100%; background:#dc2626;" onclick="resetHistory()">♻️ Tozalash</button>
+  </div>
+
+  <script>
+    let interval = null;
+    let usedNumbers = []; // chiqqan sonlar tarixi
+
+    // Ovozlar (brauzer ichidan yaratiladi)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let soundEnabled = true;
+    let volume = 0.6;
+
+    function playTick() {
+      if (!soundEnabled) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 600; // kazino uslubi
+      gain.gain.value = 0.12 * volume;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.04);
+    }
+
+    function playFinish() {
+      if (!soundEnabled) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(900, audioCtx.currentTime + 0.5);
+      gain.gain.value = 0.25 * volume;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.5);
+    }
+
+    function randomSon() {
+      const min = parseInt(document.getElementById('min').value);
+      const max = parseInt(document.getElementById('max').value);
+      const resultEl = document.getElementById('result');
+
+      if (isNaN(min) || isNaN(max) || min > max) {
+        resultEl.innerText = 'Xato';
+        return;
+      }
+
+      const total = max - min + 1;
+      if (usedNumbers.length >= total) {
+        resultEl.innerText = 'Tugadi';
+        return;
+      }
+
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      volume = document.getElementById('volume').value / 100;
+
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+
+      let speed = 40;
+      let maxSpeed = 260;
+      let current = null;
+
+      function getUniqueRandom() {
+        let r;
+        do {
+          r = Math.floor(Math.random() * (max - min + 1)) + min;
+        } while (usedNumbers.includes(r));
+        return r;
+      }
+
+      function spin() {
+        current = getUniqueRandom();
+        resultEl.innerText = current;
+        playTick();
+
+        speed += 15;
+
+        if (speed >= maxSpeed) {
+          interval = null;
+          usedNumbers.push(current);
+          updateHistory();
+          resultEl.innerText = current;
+          playFinish();
+          return;
+        }
+
+        interval = setTimeout(spin, speed);
+      }
+
+      spin();
+    }
+
+    function updateHistory() {
+      document.getElementById('history').innerText = usedNumbers.join(', ');
+    }
+
+    function resetHistory() {
+      usedNumbers = [];
+      document.getElementById('history').innerText = '';
+      document.getElementById('result').innerText = '?';
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('soundBtn').innerText = soundEnabled ? '🔊 Ovoz yoqilgan' : '🔕 Ovoz o‘chiq';
+    }
+  </script>
+
+</body>
+</html>
